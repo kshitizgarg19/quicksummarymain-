@@ -8,6 +8,8 @@ import whisper
 import os
 from pytube import YouTube
 import tempfile
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,6 +36,16 @@ def transcribe_audio(audio_file):
     result = model.transcribe(audio_file)
     return result['text']
 
+def get_transcript(video_id):
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript = transcript_list.find_transcript(['en'])
+        formatter = TextFormatter()
+        text = formatter.format_transcript(transcript.fetch())
+        return text
+    except Exception:
+        return None
+
 def summarize_content(youtube_url):
     if not youtube_url.strip():
         st.error("Please provide a YouTube URL to get started")
@@ -42,11 +54,15 @@ def summarize_content(youtube_url):
     else:
         try:
             with st.spinner("Summarizing..."):
-                # Download audio from the video
-                audio_file = download_video(youtube_url)
+                video_id = youtube_url.split('v=')[-1]
                 
-                # Transcribe the audio
-                transcript = transcribe_audio(audio_file)
+                # Try to get the transcript
+                transcript = get_transcript(video_id)
+                
+                if not transcript:
+                    # If no transcript is found, download and transcribe the audio
+                    audio_file = download_video(youtube_url)
+                    transcript = transcribe_audio(audio_file)
 
                 # Initialize the language model
                 llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["GROQ_API_KEY"])

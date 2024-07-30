@@ -31,3 +31,4 @@ validators
 pytube
 openai-whisper
 torch
+youtube-transcript-api
