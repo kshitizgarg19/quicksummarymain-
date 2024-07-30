@@ -65,7 +65,7 @@ def summarize_content(youtube_url):
                     transcript = transcribe_audio(audio_file)
 
                 # Initialize the language model
-                llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["GROQ_API_KEY"])
+                llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["groq"]["GROQ_API_KEY"])
 
                 # Create the prompt template
                 prompt_template = PromptTemplate(
@@ -76,7 +76,7 @@ def summarize_content(youtube_url):
 
                 # Create and run the summarization chain
                 chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"text": transcript})
+                summary = chain.run({"input_documents": [{"text": transcript}]})
                 st.success(summary)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
