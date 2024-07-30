@@ -76,7 +76,11 @@ def summarize_content(youtube_url):
 
                 # Create and run the summarization chain
                 chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"input_documents": [{"text": transcript}]})
+                
+                # Ensure the input is properly formatted for Langchain
+                documents = [{"text": transcript}]
+                summary = chain.run(input_documents=documents)
+                
                 st.success(summary)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
