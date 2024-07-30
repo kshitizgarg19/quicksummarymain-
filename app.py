@@ -65,7 +65,7 @@ def summarize_content(youtube_url):
                     transcript = transcribe_audio(audio_file)
 
                 # Initialize the language model
-                llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["groq"]["GROQ_API_KEY"])
+                llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["GROQ_API_KEY"])
 
                 # Create the prompt template
                 prompt_template = PromptTemplate(
