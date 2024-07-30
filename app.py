@@ -2,7 +2,6 @@ import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
-from langchain_community.document_loaders import YoutubeLoader
 from dotenv import load_dotenv
 import validators
 import whisper
@@ -15,7 +14,6 @@ load_dotenv()
 
 # Streamlit configuration
 st.set_page_config(page_title="QuickSummarizeIt", layout="centered")
-
 
 st.title("QuickSummarizeIt")
 st.subheader("Effortlessly summarize content from YouTube using advanced AI techniques with Langchain.")
