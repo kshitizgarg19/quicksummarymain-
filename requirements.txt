@@ -23,3 +23,11 @@ unstructured
 unstructured[local-inference]
 validators
 pytube
+streamlit
+langchain
+langchain-community
+python-dotenv
+validators
+pytube
+openai-whisper
+torch

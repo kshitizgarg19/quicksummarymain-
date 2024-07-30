@@ -5,6 +5,10 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain_community.document_loaders import YoutubeLoader
 from dotenv import load_dotenv
 import validators
+import whisper
+import os
+from pytube import YouTube
+import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,11 +16,25 @@ load_dotenv()
 # Streamlit configuration
 st.set_page_config(page_title="QuickSummarizeIt", layout="centered")
 
+
 st.title("QuickSummarizeIt")
 st.subheader("Effortlessly summarize content from YouTube using advanced AI techniques with Langchain.")
 
 # Input for the YouTube URL
 youtube_url = st.text_input("Enter the YouTube URL to summarize", value='')
+
+def download_video(youtube_url):
+    yt = YouTube(youtube_url)
+    stream = yt.streams.filter(only_audio=True).first()
+    temp_dir = tempfile.mkdtemp()
+    audio_file = os.path.join(temp_dir, 'audio.mp4')
+    stream.download(filename=audio_file)
+    return audio_file
+
+def transcribe_audio(audio_file):
+    model = whisper.load_model("base")
+    result = model.transcribe(audio_file)
+    return result['text']
 
 def summarize_content(youtube_url):
     if not youtube_url.strip():
@@ -26,8 +44,11 @@ def summarize_content(youtube_url):
     else:
         try:
             with st.spinner("Summarizing..."):
-                loader = YoutubeLoader.from_youtube_url(youtube_url, add_video_info=True)
-                data = loader.load()
+                # Download audio from the video
+                audio_file = download_video(youtube_url)
+                
+                # Transcribe the audio
+                transcript = transcribe_audio(audio_file)
 
                 # Initialize the language model
                 llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["GROQ_API_KEY"])
@@ -41,7 +62,7 @@ def summarize_content(youtube_url):
 
                 # Create and run the summarization chain
                 chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"input_documents": data})
+                summary = chain.run({"text": transcript})
                 st.success(summary)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
@@ -50,12 +71,30 @@ def summarize_content(youtube_url):
 if st.button("Summarize the content"):
     summarize_content(youtube_url)
 
-# Footer
-st.markdown(
-    """
-    <div class="footer">
-        Maintained and developed by <a href="https://www.linkedin.com/in/kshitiz-garg-898403207/" target="_blank" style="color: white;">Kshitiz Garg</a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Footer with copy feature
+footer_html = """
+<br><br><br>
+<div style="text-align: right;">
+   <p style="font-weight: bold;">Developed and maintained by Kshitiz Garg</p> 
+   <p>GitHub: <a href="https://github.com/kshitizgarg19">GitHub</a></p>
+   <p>LinkedIn: <a href="https://www.linkedin.com/in/kshitiz-garg-898403207/">LinkedIn</a></p>
+   <p>Instagram: <a href="https://www.instagram.com/kshitiz_garg_19?igsh=aWVjaGE0NThubG80&utm_source=qr">Instagram</a></p>
+   <p>WhatsApp: <a href="https://wa.me/918307378790">Chat on WhatsApp</a></p>
+   <p>Email: <a href="mailto:kshitizgarg19@gmail.com">kshitizgarg19@gmail.com</a> 
+   <button onclick="copyToClipboard('kshitizgarg19@gmail.com')">Copy</button></p>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    const elem = document.createElement('textarea');
+    elem.value = text;
+    document.body.appendChild(elem);
+    elem.select();
+    document.execCommand('copy');
+    document.body.removeChild(elem);
+    alert('Copied to clipboard: ' + text);
+}
+</script>
+"""
+
+st.markdown(footer_html, unsafe_allow_html=True)
