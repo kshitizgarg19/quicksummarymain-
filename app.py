@@ -2,14 +2,9 @@ import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
+from langchain_community.document_loaders import YoutubeLoader
 from dotenv import load_dotenv
 import validators
-import whisper
-import os
-from pytube import YouTube
-import tempfile
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.formatters import TextFormatter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,29 +18,6 @@ st.subheader("Effortlessly summarize content from YouTube using advanced AI tech
 # Input for the YouTube URL
 youtube_url = st.text_input("Enter the YouTube URL to summarize", value='')
 
-def download_video(youtube_url):
-    yt = YouTube(youtube_url)
-    stream = yt.streams.filter(only_audio=True).first()
-    temp_dir = tempfile.mkdtemp()
-    audio_file = os.path.join(temp_dir, 'audio.mp4')
-    stream.download(filename=audio_file)
-    return audio_file
-
-def transcribe_audio(audio_file):
-    model = whisper.load_model("base")
-    result = model.transcribe(audio_file)
-    return result['text']
-
-def get_transcript(video_id):
-    try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        transcript = transcript_list.find_transcript(['en'])
-        formatter = TextFormatter()
-        text = formatter.format_transcript(transcript.fetch())
-        return text
-    except Exception:
-        return None
-
 def summarize_content(youtube_url):
     if not youtube_url.strip():
         st.error("Please provide a YouTube URL to get started")
@@ -54,15 +26,8 @@ def summarize_content(youtube_url):
     else:
         try:
             with st.spinner("Summarizing..."):
-                video_id = youtube_url.split('v=')[-1]
-                
-                # Try to get the transcript
-                transcript = get_transcript(video_id)
-                
-                if not transcript:
-                    # If no transcript is found, download and transcribe the audio
-                    audio_file = download_video(youtube_url)
-                    transcript = transcribe_audio(audio_file)
+                loader = YoutubeLoader.from_youtube_url(youtube_url, add_video_info=True)
+                data = loader.load()
 
                 # Initialize the language model
                 llm = ChatGroq(model="Gemma-7b-It", groq_api_key=st.secrets["GROQ_API_KEY"])
@@ -76,11 +41,7 @@ def summarize_content(youtube_url):
 
                 # Create and run the summarization chain
                 chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                
-                # Ensure the input is properly formatted for Langchain
-                documents = [{"text": transcript}]
-                summary = chain.run(input_documents=documents)
-                
+                summary = chain.run({"input_documents": data})
                 st.success(summary)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
