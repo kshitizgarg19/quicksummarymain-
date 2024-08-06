@@ -18,15 +18,15 @@ st.subheader("Effortlessly summarize content from YouTube or PDF using advanced 
 
 # Sidebar for About section
 with st.sidebar:
-    st.header("About This Project")
-    st.write(
+    st.markdown(
         """
-        **QuickSummarizeIt** is a web application designed to help users effortlessly summarize content from YouTube videos or PDF documents. Leveraging advanced AI techniques and the Langchain framework, this tool provides concise and meaningful summaries that capture the essence of the content.
+        **<span style="font-size: 18px; font-weight: bold;">About This Project</span>**
 
-        The application allows users to input a YouTube URL or upload a PDF file to receive a detailed summary. The summarization process utilizes the powerful Groq API and is streamlined to ensure quick and accurate results.
+        QuickSummarizeIt is a web app that summarizes content from YouTube videos or PDFs. Utilizing advanced AI and Langchain, it offers quick and accurate summaries.
 
-        This project demonstrates the integration of various technologies, including natural language processing, document loaders, and AI-driven language models, to deliver a user-friendly summarization experience.
-        """
+        Users can enter a YouTube URL or upload a PDF to get a concise summary, showcasing integration of NLP techniques and modern AI tools.
+        """,
+        unsafe_allow_html=True
     )
 
 # Option to choose between YouTube and PDF
