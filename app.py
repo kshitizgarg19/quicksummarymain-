@@ -2,10 +2,10 @@ import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
-from langchain_community.document_loaders import YoutubeLoader, PyPDFLoader
+from langchain_community.document_loaders import YoutubeLoader
+from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
 import validators
-import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,92 +14,131 @@ load_dotenv()
 st.set_page_config(page_title="QuickSummarizeIt", layout="centered")
 
 st.title("QuickSummarizeIt")
-st.subheader("Effortlessly summarize content from YouTube or PDF using advanced AI techniques with Langchain.")
+st.subheader("Effortlessly summarize content from YouTube or PDFs using advanced AI techniques with Langchain.")
 
 # Option to choose between YouTube and PDF
-option = st.radio("Select the type of content to summarize", ("YouTube URL", "PDF Upload"))
+option = st.selectbox("Choose input type:", ["YouTube", "PDF"])
 
-def summarize_youtube(youtube_url):
-    if not youtube_url.strip():
-        st.error("Please provide a YouTube URL to get started")
-    elif not validators.url(youtube_url):
-        st.error("Invalid URL")
-    else:
-        try:
-            with st.spinner("Summarizing..."):
-                loader = YoutubeLoader.from_youtube_url(youtube_url, add_video_info=True)
-                data = loader.load()
-
-                # Initialize the language model
-                llm = ChatGroq(model="Gemma-7b-It", groq_api_key="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")
-
-                # Create the prompt template
-                prompt_template = PromptTemplate(
-                    input_variables=["text"],
-                    template='''Provide a summary of the following content in 300 words:
-                    Content: {text}'''
-                )
-
-                # Create and run the summarization chain
-                chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"input_documents": data})
-                st.success(summary)
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-
-def summarize_pdf(pdf_file):
-    if pdf_file:
-        try:
-            with st.spinner("Summarizing..."):
-                # Save uploaded PDF to a temporary file
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-                    temp_file.write(pdf_file.read())
-                    temp_file_path = temp_file.name
-
-                # Load and process the PDF
-                loader = PyPDFLoader(temp_file_path)
-                data = loader.load()
-
-                # Initialize the language model
-                llm = ChatGroq(model="Gemma-7b-It", groq_api_key="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")
-
-                # Create the prompt template
-                prompt_template = PromptTemplate(
-                    input_variables=["text"],
-                    template='''Provide a summary of the following content in 300 words:
-                    Content: {text}'''
-                )
-
-                # Create and run the summarization chain
-                chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"input_documents": data})
-                st.success(summary)
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-
-# Display input options based on user choice
-if option == "YouTube URL":
+# Input fields based on chosen option
+if option == "YouTube":
     youtube_url = st.text_input("Enter the YouTube URL to summarize", value='')
-    if st.button("Summarize YouTube Content"):
-        summarize_youtube(youtube_url)
-else:
-    pdf_file = st.file_uploader("Upload a PDF file", type="pdf")
-    if st.button("Summarize PDF Content"):
-        summarize_pdf(pdf_file)
+    def summarize_content_youtube(youtube_url):
+        if not youtube_url.strip():
+            st.error("Please provide a YouTube URL to get started")
+        elif not validators.url(youtube_url):
+            st.error("Invalid URL")
+        else:
+            try:
+                with st.spinner("Summarizing..."):
+                    loader = YoutubeLoader.from_youtube_url(youtube_url, add_video_info=True)
+                    data = loader.load()
+
+                    # Initialize the language model
+                    llm = ChatGroq(model="Gemma-7b-It", groq_api_key="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")
+
+                    # Create the prompt template
+                    prompt_template = PromptTemplate(
+                        input_variables=["text"],
+                        template='''Provide a summary of the following content in 300 words:
+                        Content: {text}'''
+                    )
+
+                    # Create and run the summarization chain
+                    chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
+                    summary = chain.run({"input_documents": data})
+                    
+                    # Display summary and copy button
+                    st.markdown(f"**Summary:**")
+                    st.write(summary)
+                    st.markdown(
+                        """
+                        <button onclick="copyToClipboard()">Copy Summary</button>
+                        <script>
+                        function copyToClipboard() {
+                            var summary = document.querySelector("pre").innerText;
+                            navigator.clipboard.writeText(summary).then(function() {
+                                alert('Summary copied to clipboard!');
+                            }, function(err) {
+                                console.error('Error copying text: ', err);
+                            });
+                        }
+                        </script>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+    
+    if st.button("Summarize the content"):
+        summarize_content_youtube(youtube_url)
+
+elif option == "PDF":
+    uploaded_files = st.file_uploader("Choose a PDF file", type="pdf", accept_multiple_files=True)
+    if uploaded_files:
+        documents = []
+        for uploaded_file in uploaded_files:
+            temp_pdf = f"./temp.pdf"
+            with open(temp_pdf, "wb") as file:
+                file.write(uploaded_file.getvalue())
+                
+            loader = PyPDFLoader(temp_pdf)
+            docs = loader.load()
+            documents.extend(docs)
+
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=500)
+        splits = text_splitter.split_documents(documents)
+        vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+        retriever = vectorstore.as_retriever()    
+
+        system_prompt = (
+            "You are an assistant for summarizing tasks. "
+            "Use the following pieces of retrieved context to provide a summary of the text. "
+            "If you don't know the summary, say that you don't know. Use three sentences maximum and keep the summary concise."
+            "\n\n"
+            "{context}"
+        )
+        qa_prompt = PromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                ("human", "{input}"),
+            ]
+        )
+        
+        chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=qa_prompt)
+
+        def summarize_content_pdf():
+            with st.spinner("Summarizing..."):
+                summary = chain.run({"input_documents": documents})
+                
+                # Display summary and copy button
+                st.markdown(f"**Summary:**")
+                st.write(summary)
+                st.markdown(
+                    """
+                    <button onclick="copyToClipboard()">Copy Summary</button>
+                    <script>
+                    function copyToClipboard() {
+                        var summary = document.querySelector("pre").innerText;
+                        navigator.clipboard.writeText(summary).then(function() {
+                            alert('Summary copied to clipboard!');
+                        }, function(err) {
+                            console.error('Error copying text: ', err);
+                        });
+                    }
+                    </script>
+                    """,
+                    unsafe_allow_html=True
+                )
+    
+    if st.button("Summarize the content"):
+        summarize_content_pdf()
 
 # Footer
 st.markdown(
     """
-    <br><br><br>
-<div style="text-align: right;">
-   <p style="font-weight: bold;">Developed and maintained by Kshitiz Garg</p> 
-   <p>GitHub: <a href="https://github.com/kshitizgarg19">GitHub</a></p>
-   <p>LinkedIn: <a href="https://www.linkedin.com/in/kshitiz-garg-898403207/">LinkedIn</a></p>
-   <p>Instagram: <a href="https://www.instagram.com/kshitiz_garg_19?igsh=aWVjaGE0NThubG80&utm_source=qr">Instagram</a></p>
-   <p>WhatsApp: <a href="https://wa.me/918307378790">Chat on WhatsApp</a></p>
-   <p>Email: <a href="mailto:kshitizgarg19@gmail.com">kshitizgarg19@gmail.com</a> 
-   <button onclick="copyToClipboard('kshitizgarg19@gmail.com')">Copy</button></p>
-</div>
+    <div class="footer">
+        Maintained and developed by <a href="https://www.linkedin.com/in/kshitiz-garg-898403207/" target="_blank" style="color: white;">Kshitiz Garg</a>
+    </div>
     """,
     unsafe_allow_html=True
 )
