@@ -14,7 +14,7 @@ load_dotenv()
 st.set_page_config(page_title="QuickSummarizeIt", layout="centered")
 
 st.title("QuickSummarizeIt")
-st.subheader("Effortlessly summarize content from YouTube or PDF using advanced AI techniques with Langchain.")
+st.subheader("Effortlessly summarize content from YouTube, PDF, or Text using advanced AI techniques with Langchain.")
 
 # Sidebar for About section
 with st.sidebar:
@@ -22,15 +22,15 @@ with st.sidebar:
         """
         **<span style="font-size: 18px; font-weight: bold;">About This Project</span>**
 
-        QuickSummarizeIt is a web app that summarizes content from YouTube videos or PDFs. Utilizing advanced AI and Langchain, it offers quick and accurate summaries.
+        QuickSummarizeIt is a web app that summarizes content from YouTube videos, PDFs, or text. Utilizing advanced AI and Langchain, it offers quick and accurate summaries.
 
-        Users can enter a YouTube URL or upload a PDF to get a concise summary, showcasing integration of NLP techniques and modern AI tools.
+        Users can enter a YouTube URL, upload a PDF, or paste text to get a concise summary, showcasing the integration of NLP techniques and modern AI tools.
         """,
         unsafe_allow_html=True
     )
 
-# Option to choose between YouTube and PDF
-option = st.radio("Select the type of content to summarize", ("YouTube URL", "PDF Upload"))
+# Option to choose between YouTube, PDF, and Text
+option = st.radio("Select the type of content to summarize", ("YouTube URL", "PDF Upload", "Text Input"))
 
 def summarize_youtube(youtube_url):
     if not youtube_url.strip():
@@ -90,15 +90,42 @@ def summarize_pdf(pdf_file):
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
 
+def summarize_text(input_text):
+    if not input_text.strip():
+        st.error("Please provide text to summarize")
+    else:
+        try:
+            with st.spinner("Summarizing..."):
+                # Initialize the language model
+                llm = ChatGroq(model="Gemma-7b-It", groq_api_key="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")
+
+                # Create the prompt template
+                prompt_template = PromptTemplate(
+                    input_variables=["text"],
+                    template='''Provide a summary of the following content in 300 words:
+                    Content: {text}'''
+                )
+
+                # Create and run the summarization chain
+                chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
+                summary = chain.run({"input_documents": [input_text]})
+                st.success(summary)
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+
 # Display input options based on user choice
 if option == "YouTube URL":
     youtube_url = st.text_input("Enter the YouTube URL to summarize", value='')
     if st.button("Summarize YouTube Content"):
         summarize_youtube(youtube_url)
-else:
+elif option == "PDF Upload":
     pdf_file = st.file_uploader("Upload a PDF file", type="pdf")
     if st.button("Summarize PDF Content"):
         summarize_pdf(pdf_file)
+else:
+    input_text = st.text_area("Enter text to summarize")
+    if st.button("Summarize Text Content"):
+        summarize_text(input_text)
 
 # Enhanced Footer
 st.markdown(
