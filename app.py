@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from langchain_community.document_loaders import YoutubeLoader, PyPDFLoader
+from langchain.docstore.document import Document
 from dotenv import load_dotenv
 import validators
 import tempfile
@@ -96,6 +97,9 @@ def summarize_text(input_text):
     else:
         try:
             with st.spinner("Summarizing..."):
+                # Wrap the input text in a Document object
+                doc = Document(page_content=input_text)
+
                 # Initialize the language model
                 llm = ChatGroq(model="Gemma-7b-It", groq_api_key="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")
 
@@ -108,7 +112,7 @@ def summarize_text(input_text):
 
                 # Create and run the summarization chain
                 chain = load_summarize_chain(llm=llm, chain_type="stuff", prompt=prompt_template)
-                summary = chain.run({"input_documents": [input_text]})
+                summary = chain.run({"input_documents": [doc]})
                 st.success(summary)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
